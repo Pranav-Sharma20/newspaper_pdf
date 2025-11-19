@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Newspaper PDF Builder</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            background: #f8f9ff;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #e8ebff;
+        }
+        .upload-icon {
+            font-size: 48px;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .file-list {
+            margin: 20px 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .file-item {
+            background: #f5f5f5;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 6px;
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .remove-btn {
+            background: #ff4757;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .form-group {
+            margin: 20px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        input[type="text"],
+        input[type="number"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin: 15px 0;
+        }
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+        .btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 20px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .error {
+            background: #ff4757;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            display: none;
+        }
+        .success {
+            background: #2ed573;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            display: none;
+        }
+        .info-text {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📰 Newspaper PDF Builder</h1>
+        <p class="subtitle">Upload images to create a labeled, sorted PDF</p>
+        
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <p><strong>Click to upload</strong> or drag and drop</p>
+            <p class="info-text">JPG, JPEG, PNG files (max 50MB total)</p>
+            <input type="file" id="fileInput" multiple accept="image/jpeg,image/jpg,image/png">
+        </div>
+
+        <div class="file-list" id="fileList"></div>
+
+        <form id="pdfForm">
+            <div class="form-group">
+                <label for="priority">Priority List (comma-separated)</label>
+                <textarea id="priority" name="priority" placeholder="Dainik Bhaskar,City Bhaskar,Rajasthan Patrika">Dainik Bhaskar,City Bhaskar,Rajasthan Patrika,First India,Sach Bedhadak</textarea>
+                <p class="info-text">Images matching these names will appear first</p>
+            </div>
+
+            <div class="form-group">
+                <label for="allLabel">Uniform Label (optional)</label>
+                <input type="text" id="allLabel" name="all_label" placeholder="Leave empty for per-file labels">
+                <p class="info-text">Use same label for all pages, or leave blank for filename labels</p>
+            </div>
+
+            <div class="form-group">
+                <label for="fontSize">Font Size: <span id="fontSizeValue">28</span></label>
+                <input type="range" id="fontSize" name="font_size" min="14" max="48" value="28" style="width: 100%;">
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="noLabel" name="no_label">
+                <label for="noLabel" style="margin: 0;">Disable labels (no text box)</label>
+            </div>
+
+            <div class="form-group">
+                <label for="maxWidth">Max Width (optional, px)</label>
+                <input type="number" id="maxWidth" name="max_width" placeholder="Leave empty for original size">
+            </div>
+
+            <div class="form-group">
+                <label for="maxHeight">Max Height (optional, px)</label>
+                <input type="number" id="maxHeight" name="max_height" placeholder="Leave empty for original size">
+            </div>
+
+            <div class="error" id="error"></div>
+            <div class="success" id="success"></div>
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p style="margin-top: 10px;">Generating PDF...</p>
+            </div>
+
+            <button type="submit" class="btn" id="generateBtn" disabled>Generate PDF</button>
+        </form>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const pdfForm = document.getElementById('pdfForm');
+        const generateBtn = document.getElementById('generateBtn');
+        const loading = document.getElementById('loading');
+        const errorDiv = document.getElementById('error');
+        const successDiv = document.getElementById('success');
+        const fontSizeInput = document.getElementById('fontSize');
+        const fontSizeValue = document.getElementById('fontSizeValue');
+
+        let selectedFiles = [];
+
+        // Font size slider
+        fontSizeInput.addEventListener('input', (e) => {
+            fontSizeValue.textContent = e.target.value;
+        });
+
+        // Click to upload
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        // Drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = Array.from(e.dataTransfer.files);
+            addFiles(files);
+        });
+
+        // File input change
+        fileInput.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            addFiles(files);
+        });
+
+        function addFiles(files) {
+            files.forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    selectedFiles.push(file);
+                }
+            });
+            renderFileList();
+            updateGenerateButton();
+        }
+
+        function renderFileList() {
+            fileList.innerHTML = '';
+            selectedFiles.forEach((file, index) => {
+                const div = document.createElement('div');
+                div.className = 'file-item';
+                div.innerHTML = `
+                    <span>${file.name}</span>
+                    <button type="button" class="remove-btn" onclick="removeFile(${index})">Remove</button>
+                `;
+                fileList.appendChild(div);
+            });
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            renderFileList();
+            updateGenerateButton();
+        }
+
+        function updateGenerateButton() {
+            generateBtn.disabled = selectedFiles.length === 0;
+        }
+
+        pdfForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (selectedFiles.length === 0) return;
+
+            const formData = new FormData();
+            selectedFiles.forEach(file => {
+                formData.append('files[]', file);
+            });
+            formData.append('priority', document.getElementById('priority').value);
+            formData.append('all_label', document.getElementById('allLabel').value);
+            formData.append('font_size', document.getElementById('fontSize').value);
+            formData.append('max_width', document.getElementById('maxWidth').value);
+            formData.append('max_height', document.getElementById('maxHeight').value);
+            formData.append('no_label', document.getElementById('noLabel').checked ? 'true' : 'false');
+
+            generateBtn.disabled = true;
+            loading.style.display = 'block';
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.error || 'Failed to generate PDF');
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `newspapers_${new Date().toISOString().split('T')[0]}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                successDiv.textContent = 'PDF generated successfully!';
+                successDiv.style.display = 'block';
+                
+                // Clear files after success
+                selectedFiles = [];
+                renderFileList();
+                
+            } catch (error) {
+                errorDiv.textContent = 'Error: ' + error.message;
+                errorDiv.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+                updateGenerateButton();
+            }
+        });
+    </script>
+</body>
+</html>
