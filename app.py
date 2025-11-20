@@ -52,6 +52,28 @@ def build_sort_key(priority: List[str]):
         return (pr_rank, base, page_num, idx)
     return sort_key
 
+def build_sort_key_with_map(priority: List[str], filename_map: dict = None):
+    """Build sort key using original filenames from map for accurate matching."""
+    priority_l = [p.lower() for p in priority]
+    def sort_key(pair):
+        idx, path = pair
+        # Use original filename if available, otherwise use path stem
+        if filename_map and str(path) in filename_map:
+            name = filename_map[str(path)].lower()
+        else:
+            name = path.stem.lower()
+        
+        pr_rank = len(priority_l) + 1
+        for i, kw in enumerate(priority_l):
+            if kw in name:
+                pr_rank = i
+                break
+        m = PAGE_RE.search(name)
+        page_num = int(m.group(1)) if m else 0
+        base = PAGE_RE.sub('', name).strip('- _')
+        return (pr_rank, base, page_num, idx)
+    return sort_key
+
 def scale_image(im: Image.Image, max_w: Optional[int], max_h: Optional[int]) -> Image.Image:
     if max_w is None and max_h is None:
         return im
@@ -85,7 +107,8 @@ def generate_pdf(image_paths: List[Path], priority: List[str], all_label: Option
                  no_label: bool, output_path: Path, filename_map: dict = None):
     font = load_font(font_size)
     indexed = list(enumerate(image_paths))
-    indexed.sort(key=build_sort_key(priority))
+    # Sort using original filenames from the map for accurate priority matching
+    indexed.sort(key=build_sort_key_with_map(priority, filename_map))
     ordered = [p for _, p in indexed]
     
     processed = []
