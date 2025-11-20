@@ -82,7 +82,7 @@ def add_label(image: Image.Image, label_text: str, font: ImageFont.ImageFont) ->
 
 def generate_pdf(image_paths: List[Path], priority: List[str], all_label: Optional[str], 
                  font_size: int, max_w: Optional[int], max_h: Optional[int], 
-                 no_label: bool, output_path: Path):
+                 no_label: bool, output_path: Path, filename_map: dict = None):
     font = load_font(font_size)
     indexed = list(enumerate(image_paths))
     indexed.sort(key=build_sort_key(priority))
@@ -94,7 +94,11 @@ def generate_pdf(image_paths: List[Path], priority: List[str], all_label: Option
             im = Image.open(p).convert('RGB')
             im = scale_image(im, max_w, max_h)
             if not no_label:
-                label = all_label if all_label is not None else p.stem
+                # Use original filename from map if available, otherwise use path stem
+                if filename_map and str(p) in filename_map:
+                    label = all_label if all_label is not None else filename_map[str(p)]
+                else:
+                    label = all_label if all_label is not None else p.stem
                 im = add_label(im, label, font)
             processed.append(im)
         except Exception as e:
@@ -136,15 +140,19 @@ def generate():
     # Create temp directory
     temp_dir = tempfile.mkdtemp()
     try:
-        # Save uploaded files
+        # Save uploaded files with original names preserved for labels
         image_paths = []
+        filename_map = {}  # Map secure filename to original name
         for file in files:
-            filename = secure_filename(file.filename)
+            original_name = file.filename
+            filename = secure_filename(original_name)
             ext = Path(filename).suffix.lower()
             if ext in EXTS:
                 filepath = Path(temp_dir) / filename
                 file.save(str(filepath))
                 image_paths.append(filepath)
+                # Store original name without extension for labels
+                filename_map[str(filepath)] = Path(original_name).stem
         
         if not image_paths:
             return jsonify({'error': 'No valid image files uploaded'}), 400
@@ -152,7 +160,7 @@ def generate():
         # Generate PDF
         output_filename = f"newspapers_{date.today().isoformat()}.pdf"
         output_path = Path(temp_dir) / output_filename
-        page_count = generate_pdf(image_paths, priority, all_label, font_size, max_w, max_h, no_label, output_path)
+        page_count = generate_pdf(image_paths, priority, all_label, font_size, max_w, max_h, no_label, output_path, filename_map)
         
         # Send file
         return send_file(
