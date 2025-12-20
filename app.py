@@ -43,13 +43,17 @@ def build_sort_key(priority: List[str]):
         name = path.stem.lower()
         pr_rank = len(priority_l) + 1
         for i, kw in enumerate(priority_l):
-            if kw in name:
+            match_kw = kw.rstrip(';')
+            if match_kw in name:
                 pr_rank = i
                 break
+        # Prioritize filenames containing semicolon
+        has_semicolon = ';' in name
         m = PAGE_RE.search(name)
         page_num = int(m.group(1)) if m else 0
         base = PAGE_RE.sub('', name).strip('- _')
-        return (pr_rank, base, page_num, idx)
+        # Sort by: files with semicolon first, then priority rank, then base name, then page number
+        return (not has_semicolon, pr_rank, base, page_num, idx)
     return sort_key
 
 def build_sort_key_with_map(priority: List[str], filename_map: dict = None):
@@ -65,13 +69,17 @@ def build_sort_key_with_map(priority: List[str], filename_map: dict = None):
         
         pr_rank = len(priority_l) + 1
         for i, kw in enumerate(priority_l):
-            if kw in name:
+            match_kw = kw.rstrip(';')
+            if match_kw in name:
                 pr_rank = i
                 break
+        # Prioritize filenames containing semicolon
+        has_semicolon = ';' in name
         m = PAGE_RE.search(name)
         page_num = int(m.group(1)) if m else 0
         base = PAGE_RE.sub('', name).strip('- _')
-        return (pr_rank, base, page_num, idx)
+        # Sort by: files with semicolon first, then priority rank, then base name, then page number
+        return (not has_semicolon, pr_rank, base, page_num, idx)
     return sort_key
 
 def scale_image(im: Image.Image, max_w: Optional[int], max_h: Optional[int]) -> Image.Image:
